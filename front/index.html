@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>临时文件夹</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css"
+        integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"
+        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"></script>
+    <style>
+        tr td {
+            vertical-align: middle !important;
+        }
+
+        span:hover {
+            cursor: pointer !important;
+        }
+
+        tbody p{
+            text-align: center !important;
+            margin: 3em 0 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- nav bar -->
+    <nav class="navbar navbar-default">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                    data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/">FileS</a>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="#">文件列表 <span class="sr-only">(current)</span></a></li>
+                    <li><a href="#"></a></li>
+                    
+                </ul>
+                <form class="navbar-form navbar-left">
+                    <div class="form-group">
+                        <input style="width:300px;" id="keywords" type="text" class="form-control" placeholder="关键字搜索">
+                    </div>
+                    <button id="search" type="button" class="btn btn-default">搜索</button>
+                </form>
+                <ul class="nav navbar-nav navbar-right">
+                    <!-- <li><a href="#">Link</a></li> -->
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+                            aria-expanded="false">文件管理 <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">登录</a></li>
+                            <li role="separator" class="divider"></li>
+                            <li><a href="#">统计信息</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div><!-- /.navbar-collapse -->
+        </div><!-- /.container-fluid -->
+    </nav>
+
+    <!-- file list panel -->
+    <div class="container">
+        <!-- 警告框 -->
+        <div id="tip" style="display:none" class="alert alert-success alert-dismissible" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
+                    aria-hidden="true">&times;</span></button>
+            <strong>Success!</strong> 文件上传成功。
+        </div>
+        <!-- 上传区域 -->
+        <form style="padding: 0 15px;" class="form-inline row">
+            <div class="form-group">
+                <label for="fileInput">上传文件</label>
+                <input type="file" name="file" class="form-control" id="fileInput">
+            </div>
+            <div class="form-group">
+                <label for="description">描述</label>
+                <input type="text" style="min-width:250px;" name="description" class="form-control"
+                    id="descriptionInput" placeholder="添加描述以便快速找到您的文件">
+            </div>
+            <button type="button" id="submit" class="btn btn-default">上传</button>
+        </form>
+
+        <br>
+        <!-- 进度条 -->
+        <div style="display:none" class="progress">
+            <div class="progress-bar progress-bar-success progress-bar-striped active" role="progressbar"
+                aria-valuenow="0" aria-valuemin="2" aria-valuemax="100" style="width: 2%">
+                <span>0% </span>
+            </div>
+        </div>
+
+        <br>
+        <!-- 文件列表 -->
+        <div class="panel panel-default">
+            <!-- Default panel contents -->
+            <div class="panel-heading">临时文件仓库</div>
+
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <td>#</td>
+                            <td>文件名</td>
+                            <td>上传时间</td>
+                            <td>文件大小</td>
+                            <td>描述</td>
+                            <td>下载次数</td>
+                            <td>操作</td>
+                        </tr>
+                    </thead>
+
+                    <tbody id="list">
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- 翻页 -->
+        <nav style="text-align:center" aria-label="Page navigation">
+            <ul class="pagination">
+                <li>
+                    <span aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </span>
+                </li>
+
+                <li id="next">
+                    <span aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </span>
+                </li>
+            </ul>
+        </nav>
+
+    </div>
+
+    <!-- script 脚本 -->
+    <script>
+        var BASE_URL = 'http://www.kkboom.cn:8888/api/';
+        var page = 0;
+        var count = 0;
+        $(window).ready(function () {
+
+            getList(page, true);
+
+            // 文件大小格式化
+            function fileSize(size) {
+                if (size < 1024) return size + 'B';
+                else if (size >= 1024 && size < 1048576) return (size / 1024).toFixed(1) + 'KB';
+                else return (size / 1024 / 1024).toFixed(1) + 'MB';
+            }
+
+            // 翻页事件监听 要用到事件委托 
+            $("ul.pagination").on("click", "span", function () {
+                var attrVal = $(this).attr('aria-label');
+                // console.log(attrVal);
+                // 上一页
+                if (attrVal == 'Previous') {
+                    page--;
+                    if (page < 0) {
+                        page = 0;
+                        getList(page);
+                    } else {
+                        getList(page);
+                    }
+
+                } else if (attrVal == 'Next') {
+                    page++;
+                    var n = Math.ceil(parseInt(count / 10));
+                    if (page > n) {
+                        page = n;
+                        getList(page);
+                    } else {
+                        getList(page);
+                    }
+                } else {
+                    page = parseInt($(this).text() - 1);
+                    getList(page);
+                }
+            });
+
+            // 获取文件列表 这里传两个参数是因为第一次获取数据要初始化页码
+            function getList(page, isArrangePage) {
+                $.get(BASE_URL + 'filelist?page=' + page, function (data, status) {
+                    // console.log(data);
+                    if (status == "success") {
+                        var list = data.fileList;
+                        count = data.count[0]['count(*)'];
+                        showList(list);
+                        
+                        if (isArrangePage) {
+                            // 翻页控制 自执行函数 只执行一次
+                            (function arrangePage(n) {
+                                var pages = Math.ceil(n / 10);
+                                if (pages > 1) {
+                                    for (var i = 0; i < pages; i++) {
+                                        var Oli = document.createElement('li');
+                                        Oli.innerHTML = `<span>` + (i + 1) + `</span>`;
+                                        $('#next')[0].before(Oli);
+                                    }
+                                }
+                            })(count);
+                        }
+                        page = parseInt(data.page);
+                    }
+                })
+            }
+
+            // 展示列表
+            function showList(list) {
+                $('#list')[0].innerHTML = '';
+                for (var i = 0; i < list.length; i++) {
+                    var Otr = document.createElement('tr');
+                    Otr.innerHTML = `
+                            <td>`+ list[i].id + `</td>
+                            <td>`+ list[i].fileName + `</td>
+                            <td>`+ list[i].c_date + `</td>
+                            <td>`+ fileSize(list[i].size) + `</td>
+                            <td>`+ list[i].description + `</td>
+                            <td>`+ list[i].downloadtime + `</td>
+                            <td><a href="`+ list[i].url + `" download class="btn btm-sm btn-success">下载</a></td>
+                        `;
+                    $('.table tbody').append(Otr);
+                }
+            }
+
+            // 文件上传 XHR方式发送数据 监听进度
+            $('#submit').click(function () {
+                var file = $("#fileInput")[0].files[0];
+                var formdate = new FormData();
+                formdate.append("file", file);
+                formdate.append("description", $("#descriptionInput").val());
+
+                var xhr = new XMLHttpRequest();
+                xhr.onloadstart = function (event) {
+                    $('.progress').show(300);
+                }
+                xhr.upload.onprogress = function (event) {
+                    // console.log(event);
+                    if (event.lengthComputable) {
+                        var loaded = event.loaded;
+                        var total = event.total;
+                        var rate = parseInt(loaded / total * 100);
+                        $('.progress .progress-bar').css('width', rate + '%');
+                        $('.progress .progress-bar span').text(rate + '%');
+
+                    }
+                }
+                xhr.onabort = function (event) {
+                    console.log('interrupt')
+                }
+                xhr.onerror = function (event) {
+                    console.log('err');
+                }
+
+                xhr.onload = function (event) {
+                    // alert("上传完成");
+                    getList(page);
+                    $('#tip').show(200);
+                    $('.progress').fadeOut(200);
+                }
+                xhr.open("post", BASE_URL + 'upload', true);
+                xhr.send(formdate);
+            });
+
+            // 关键字搜索
+            $('#search').click(function () {
+                var key = $('#keywords').val();
+                search(key);
+            });
+
+            // 回车键搜索
+            $('#search').keydown(function(e){
+                var key = $('#keywords').val();
+                if(e.which == 13){
+                    search(key);
+                }
+            });
+
+            // 搜索
+            function search(key){
+                if (key) {
+                    $.get(BASE_URL + 'find?keywords=' + key, function (res, status) {
+                        if (res.findResult) {
+                            showList(res.findResult);
+                        }else{
+                            showNoResult();
+                        }
+                    })
+                }
+            }
+
+            // 无搜索结果
+            function showNoResult(){
+                $('#list')[0].innerHTML = '';
+                var noResult = document.createElement('p');
+                noResult.innerText = '抱歉，没有相关文件！';
+                $('.table tbody').append(noResult);
+            }
+        });
+    </script>
+</body>
+
+</html>
