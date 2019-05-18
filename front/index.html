@@ -15,13 +15,15 @@
     <style>
         tr td {
             vertical-align: middle !important;
+            max-width: 200px;
+            overflow: hidden;
         }
 
         span:hover {
             cursor: pointer !important;
         }
 
-        tbody p{
+        table p {
             text-align: center !important;
             margin: 3em 0 !important;
         }
@@ -49,7 +51,7 @@
                 <ul class="nav navbar-nav">
                     <li class="active"><a href="#">文件列表 <span class="sr-only">(current)</span></a></li>
                     <li><a href="#"></a></li>
-                    
+
                 </ul>
                 <form class="navbar-form navbar-left">
                     <div class="form-group">
@@ -58,12 +60,12 @@
                     <button id="search" type="button" class="btn btn-default">搜索</button>
                 </form>
                 <ul class="nav navbar-nav navbar-right">
-                    <!-- <li><a href="#">Link</a></li> -->
+                    <li id="onLineTip"></li>
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
                             aria-expanded="false">文件管理 <span class="caret"></span></a>
                         <ul class="dropdown-menu">
-                            <li><a href="#">登录</a></li>
+                            <li><a id="logout" href="#" data-toggle="modal" data-target="#exampleModal">登录</a></li>
                             <li role="separator" class="divider"></li>
                             <li><a href="#">统计信息</a></li>
                         </ul>
@@ -79,7 +81,7 @@
         <div id="tip" style="display:none" class="alert alert-success alert-dismissible" role="alert">
             <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
                     aria-hidden="true">&times;</span></button>
-            <strong>Success!</strong> 文件上传成功。
+            <strong id="tipmsg"></strong> 
         </div>
         <!-- 上传区域 -->
         <form style="padding: 0 15px;" class="form-inline row">
@@ -125,7 +127,7 @@
                         </tr>
                     </thead>
 
-                    <tbody id="list">
+                    <tbody id="list" >
                     </tbody>
                 </table>
             </div>
@@ -149,11 +151,40 @@
             </ul>
         </nav>
 
+        <!-- 登录框 -->
+        <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                                aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="exampleModalLabel">登录</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="form-group">
+                                <label for="email" class="control-label">邮箱:</label>
+                                <input type="text" class="form-control" id="email">
+                            </div>
+                            <div class="form-group">
+                                <label for="password" class="control-label">密码:</label>
+                                <input type="password" class="form-control" id="password">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button id="login" type="button" class="btn btn-primary">登录</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- script 脚本 -->
     <script>
         var BASE_URL = 'http://www.kkboom.cn:8888/api/';
+        // var BASE_URL = 'http://localhost:8888/api/';
         var page = 0;
         var count = 0;
         $(window).ready(function () {
@@ -204,7 +235,7 @@
                         var list = data.fileList;
                         count = data.count[0]['count(*)'];
                         showList(list);
-                        
+
                         if (isArrangePage) {
                             // 翻页控制 自执行函数 只执行一次
                             (function arrangePage(n) {
@@ -235,9 +266,28 @@
                             <td>`+ fileSize(list[i].size) + `</td>
                             <td>`+ list[i].description + `</td>
                             <td>`+ list[i].downloadtime + `</td>
-                            <td><a href="`+ list[i].url + `" download class="btn btm-sm btn-success">下载</a></td>
+                            <td>
+                                <a href="`+ list[i].url + `" download class="btn btm-sm btn-success">下载</a>
+                            </td>
                         `;
                     $('.table tbody').append(Otr);
+                    (function () {
+                        var userName = localStorage.getItem('name');
+                        if (userName) {
+                            // $('#onLineTip').html(`<a href="#">` + userName + `</a>`);
+                            $('.dropdown-toggle').html(userName+'<span class="caret"></span>');
+                            $('#logout').text('退出登录');
+                            var deleteButton = document.createElement('button');
+                            deleteButton.innerText = '删除';
+                            // 给动态添加的button添加样式和自定义属性--文件id，以便删除操作
+                            $(deleteButton).addClass("btn btm-sm btn-danger delete").attr('fileId',list[i].id);
+                            // console.log($('tbody').children());
+                            $('td:last').append(deleteButton);
+
+                            // 动态加载管理员操作代码 --删除
+                            // document.getElementById("delScript").src = './static/delete.js';
+                        }
+                    })()
                 }
             }
 
@@ -273,7 +323,7 @@
                 xhr.onload = function (event) {
                     // alert("上传完成");
                     getList(page);
-                    $('#tip').show(200);
+                    tipNow("上传成功","success");
                     $('.progress').fadeOut(200);
                 }
                 xhr.open("post", BASE_URL + 'upload', true);
@@ -287,20 +337,20 @@
             });
 
             // 回车键搜索
-            $('#search').keydown(function(e){
+            $('#search').keydown(function (e) {
                 var key = $('#keywords').val();
-                if(e.which == 13){
+                if (e.which == 13) {
                     search(key);
                 }
             });
 
             // 搜索
-            function search(key){
+            function search(key) {
                 if (key) {
                     $.get(BASE_URL + 'find?keywords=' + key, function (res, status) {
                         if (res.findResult) {
                             showList(res.findResult);
-                        }else{
+                        } else {
                             showNoResult();
                         }
                     })
@@ -308,12 +358,107 @@
             }
 
             // 无搜索结果
-            function showNoResult(){
-                $('#list')[0].innerHTML = '';
+            function showNoResult() {
                 var noResult = document.createElement('p');
                 noResult.innerText = '抱歉，没有相关文件！';
-                $('.table tbody').append(noResult);
+                $('.table').html(noResult);
             }
+
+            // 登录控制
+            $('#login').click(function () {
+                var email = $('#email').val();
+                var passwd = $('#password').val();
+                // console.log(email,passwd);
+                // $('#exampleModal').modal('hide');
+                $.post({
+                    url: BASE_URL + 'login',
+                    data: {
+                        email, passwd
+                    },
+                    success: function (res) {
+                        if (res) {
+                            // console.log(res);
+                            document.cookie = res.token+";domain=kkboom.cn";
+                            if (res.user) {
+                                // 存储登录用户信息到localstorage
+                                localStorage.setItem('name', res.user.name);
+                                localStorage.setItem('email', res.user.email);
+                            }
+                        }
+                        $('#exampleModal').modal('hide');
+                        window.location.reload();
+                    },
+                    error: function (res) {
+                        var loginTip = document.createElement('p');
+                        loginTip.innerText = res.responseJSON.msg;
+                        $('.modal-body p').remove();
+                        $('.modal-body')[0].append(loginTip);
+                    }
+                })
+            });
+
+            // 警告框封装
+            function tipNow(msg,type){
+                $('#tip').hide();
+                switch(type){
+                    case "success":
+                        $('#tip').attr('class','alert alert-success alert-dismissible');
+                        break;
+                    case "failed" :
+                        $('#tip').attr('class','alert alert-danger alert-dismissible');
+                        break;
+                    default:
+                        $('#tip').attr('class','alert alert-info alert-dismissible');       
+                }
+                $('#tipmsg').text(msg);
+                $('#tip').show(200);
+                setTimeout(function(){
+                    $('#tip').hide(200);
+                },3000)
+            }
+
+            // 删除操作
+            $('tbody').on('click', 'button', function () {
+                // console.log("123");
+                var confirm = window.confirm("确定要删除吗？");
+                if(confirm){
+                    // console.log($(this).attr('fileId'));
+                    var delId = $(this).attr('fileId');
+
+                    // var xhr = new XMLHttpRequest();
+                    // xhr.open('get',BASE_URL+'del?id='+delId,true);
+                    // xhr.withCredentials = true;
+                    // xhr.send();
+
+                    $.ajax({
+                        url:BASE_URL+'del?id='+delId,
+                        type:'GET',
+                        xhrFields: {
+                            withCredentials: true // 这里设置了withCredentials,解决ajax跨域请求不带cookie
+                        },
+                        crossDomain:true,
+                        success:function(res){
+                            // console.log(res);
+                            tipNow(res.msg,"success");
+                            getList(page);
+                        },
+                        error:function(res){
+                            tipNow(res.responseJSON.msg,"failed");
+                            // console.log(res.responseJSON.msg);
+                        }
+                    });
+                }
+            });
+
+            // 退出登录
+            $('#logout').click(function(){
+                var isOnline = localStorage.getItem('name');
+                if(isOnline){
+                    localStorage.clear();
+                    document.cookie = '';
+                    window.location.reload();
+                }
+            });
         });
     </script>
 </body>

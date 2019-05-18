@@ -7,8 +7,9 @@ const app = new Koa();
 
 app.context.db = config.db;
 app.use(async (ctx,next)=>{
-    ctx.set('Access-Control-Allow-Origin','*');
+    ctx.set('Access-Control-Allow-Origin','null');
     ctx.set('Access-Control-Allow-Headers','*');
+    ctx.set('Access-Control-Allow-Credentials',true);
     await next();
 });
 

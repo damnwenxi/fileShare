@@ -15,7 +15,9 @@
   "author": "1396956549@qq.com",
   "license": "ISC",
   "devDependencies": {
+    "bcrypt": "^3.0.6",
     "co-mysql": "^1.0.0",
+    "jsonwebtoken": "^8.5.1",
     "koa": "^2.7.0",
     "koa-body": "^4.1.0",
     "koa-router": "^7.4.0",
